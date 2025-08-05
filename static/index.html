@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Matcher</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- NEW: Resume Overlay that appears on top -->
+    <div id="resume-overlay">
+        <div id="resume-editor">
+            <h2>Resume</h2>
+            <textarea id="resume-input" placeholder="Paste your full resume text here..."></textarea>
+            <button id="save-resume-button">Save & Close</button>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <header id="app-header">
+            <h1>Resume Matcher</h1>
+            <button id="edit-resume-button" class="hidden">Edit Resume</button>
+        </header>
+
+        <!-- The results and the job description are now grouped -->
+        <main id="main-content">
+            <div id="results-dashboard">
+                <div id="dashboard-placeholder">
+                    <p>Enter your resume and a job description to see your analysis.</p>
+                </div>
+                <div id="results-content" class="hidden">
+                    <div class="result-section">
+                        <h3>Match Score</h3>
+                        <div class="progress-bar-container">
+                            <div id="progress-bar-fill"></div>
+                            <span id="score-text">0%</span>
+                        </div>
+                    </div>
+                    <div class="result-section">
+                        <h3>Suggested Improvements</h3>
+                        <div id="improvements-content" class="content-box"></div>
+                    </div>
+                    <div class="result-section">
+                        <h3>Suggested Next Steps</h3>
+                        <div id="next-steps-content" class="content-box"></div>
+                    </div>
+                </div>
+            </div>
+
+            <form id="jd-form">
+                <label for="jd-input">Job Description</label>
+                <textarea id="jd-input" placeholder="Paste the job description here..."></textarea>
+                <button type="submit" id="run-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <span id="run-button-text">Analyze</span>
+                </button>
+            </form>
+        </main>
+        
+        <footer id="app-footer">
+            <a href="#" target="_blank">GitHub</a>
+            <span>•</span>
+            <a href="#" target="_blank">Medium</a>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
