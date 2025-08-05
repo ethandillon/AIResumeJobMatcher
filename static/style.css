@@ -141,3 +141,135 @@ body {
 #save-resume-button {
     margin-top: 0;
 }
+
+/* Add these new styles at the top or in a new section of style.css */
+
+/* --- NEW: Main Layout --- */
+#layout-wrapper {
+    display: flex;
+    gap: 20px;
+    width: 95%;
+    max-width: 1400px;
+    margin: 40px auto;
+}
+
+#history-panel {
+    background-color: var(--container-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    width: 280px;
+    flex-shrink: 0; /* Prevent panel from shrinking */
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 80px); /* Match height of other content */
+}
+
+#app-container {
+    flex-grow: 1; /* Allow main app to take remaining space */
+    margin: 0; /* Override previous margin */
+    width: 100%; /* Override previous width */
+}
+
+/* --- NEW: History Panel Styles --- */
+#history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+#history-header h3 {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+#clear-history-button {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: #aaa;
+    padding: 4px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8em;
+    transition: all 0.2s;
+}
+#clear-history-button:hover {
+    background-color: #f44336;
+    color: white;
+    border-color: #f44336;
+}
+
+#history-list {
+    padding: 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background-color: var(--input-bg);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.history-item:hover {
+    background-color: #4a4a4a;
+    border-color: var(--primary-accent);
+}
+
+.history-item.active {
+    background-color: var(--user-msg-bg, #094771); /* Fallback color */
+    border-color: var(--primary-accent);
+}
+
+.history-item-score {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+.history-item-date {
+    font-size: 0.8em;
+    color: #aaa;
+}
+
+/* Make body scrollable if needed */
+body {
+    height: auto;
+    min-height: 100vh;
+}
+
+/* Add these new styles anywhere in your style.css file */
+
+/* Style for the job description box when it's read-only */
+#jd-input[readonly] {
+    background-color: var(--container-bg); /* Match the non-input background */
+    cursor: default;
+    opacity: 0.8;
+}
+#jd-input[readonly]:focus {
+    outline: none; /* Remove the focus ring when read-only */
+}
+
+/* Style for the new button */
+#new-analysis-button {
+    padding: 10px 25px;
+    border: 1px solid var(--primary-accent);
+    background-color: var(--container-bg);
+    color: var(--primary-accent);
+    border-radius: 6px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#new-analysis-button:hover {
+    background-color: var(--primary-accent);
+    color: white;
+}
