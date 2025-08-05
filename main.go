@@ -5,16 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
+	"time" // Import for Redis TTL
 
 	"github.com/google/generative-ai-go/genai"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9" // Import Redis client
 	"google.golang.org/api/option"
 )
 
+// A custom type that can unmarshal a JSON string OR a JSON array of strings
+// into a Go slice of strings. This makes our code resilient to Gemini's
+// inconsistent output format.
 type FlexibleStringSlice []string
 
 func (f *FlexibleStringSlice) UnmarshalJSON(data []byte) error {
@@ -31,9 +36,7 @@ func (f *FlexibleStringSlice) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("could not unmarshal %q as either a string or a slice of strings", data)
 }
 
-const usageCookieName = "usage_count"
-const maxUsageCount = 3
-
+// Structs for API communication
 type AnalysisRequest struct {
 	Resume         string `json:"resume"`
 	JobDescription string `json:"jobDescription"`
@@ -45,25 +48,62 @@ type AnalysisResponse struct {
 	NextSteps    FlexibleStringSlice `json:"nextSteps"`
 }
 
-func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
+// Helper function to get the user's real IP address.
+func getIPAddress(r *http.Request) string {
+	// Check proxy headers first, as they are more reliable.
+	ip := r.Header.Get("X-Forwarded-For")
+	if ip != "" {
+		return strings.Split(ip, ",")[0]
+	}
+	ip = r.Header.Get("X-Real-IP")
+	if ip != "" {
+		return ip
+	}
+
+	// If no proxy headers, fall back to RemoteAddr.
+	// Use net.SplitHostPort to reliably separate the IP and port.
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		// If there's an error (e.g., no port in the address),
+		// the RemoteAddr is likely just the IP itself.
+		return r.RemoteAddr
+	}
+	return host
+}
+
+// chatHandler now accepts both the Gemini model and the Redis client.
+func chatHandler(model *genai.GenerativeModel, rdb *redis.Client) http.HandlerFunc {
+	const maxUsageCount = 3
+	const rateLimitDuration = 24 * time.Hour
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
-		var currentCount int = 0
-		usageCookie, err := r.Cookie(usageCookieName)
-		if err == nil {
-			count, convErr := strconv.Atoi(usageCookie.Value)
-			if convErr == nil {
-				currentCount = count
-			}
+		ctx := context.Background()
+
+		// --- Redis-based IP Rate Limiting ---
+		ip := getIPAddress(r)
+
+		// INCR is an atomic operation.
+		currentCount, err := rdb.Incr(ctx, ip).Result()
+		if err != nil {
+			log.Printf("Error incrementing Redis key for IP %s: %v", ip, err)
+			http.Error(w, "Could not process request", http.StatusInternalServerError)
+			return
 		}
 
-		if currentCount >= maxUsageCount {
-			log.Printf("User has reached usage limit of %d. Blocking request.", maxUsageCount)
-			http.Error(w, "You have reached your usage limit for today.", http.StatusTooManyRequests)
+		// If this is the first request (count is 1), set the expiration for the key.
+		if currentCount == 1 {
+			rdb.Expire(ctx, ip, rateLimitDuration)
+		}
+
+		// Check if the user has exceeded the limit
+		if currentCount > maxUsageCount {
+			log.Printf("IP %s has reached usage limit of %d. Blocking request.", ip, maxUsageCount)
+			http.Error(w, fmt.Sprintf("You have reached the limit of %d requests per day.", maxUsageCount), http.StatusTooManyRequests)
 			return
 		}
 
@@ -73,7 +113,8 @@ func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
 			return
 		}
 
-		log.Println("Received request, generating prompt for Gemini...")
+		log.Printf("Received request from IP %s (Usage: %d/%d)", ip, currentCount, maxUsageCount)
+
 		prompt := fmt.Sprintf(`
 			Analyze the following resume against the job description.
 			Your response MUST be a valid JSON object. Do not include any text or markdown formatting before or after the JSON object.
@@ -95,7 +136,6 @@ func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
 			---
 		`, req.Resume, req.JobDescription)
 
-		ctx := context.Background()
 		resp, err := model.GenerateContent(ctx, genai.Text(prompt))
 		if err != nil {
 			log.Printf("Error generating content: %v", err)
@@ -103,11 +143,10 @@ func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
 			return
 		}
 
-		// NEW: Check the Finish Reason
 		if len(resp.Candidates) > 0 {
 			if resp.Candidates[0].FinishReason == genai.FinishReasonSafety {
 				log.Println("WARNING: Gemini response was blocked due to safety settings.")
-				http.Error(w, "The analysis was blocked by the content safety filter. This can happen due to sensitive information in the resume or job description. Please try again with different text.", http.StatusBadRequest)
+				http.Error(w, "The analysis was blocked by the content safety filter. This can happen due to sensitive information. Please try again with different text.", http.StatusBadRequest)
 				return
 			}
 		}
@@ -127,7 +166,6 @@ func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
 		cleanedString = strings.TrimSuffix(cleanedString, "```")
 		cleanedString = strings.TrimSpace(cleanedString)
 
-		// NEW: Unconditional Logging for Debugging
 		log.Printf("Cleaned JSON response from Gemini: %s", cleanedString)
 
 		var analysisResp AnalysisResponse
@@ -140,16 +178,7 @@ func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
 
 		log.Printf("Successfully received and parsed analysis. Match score: %d%%", analysisResp.MatchScore)
 
-		newCount := currentCount + 1
-		newCookie := http.Cookie{
-			Name:     usageCookieName,
-			Value:    strconv.Itoa(newCount),
-			Path:     "/",
-			MaxAge:   86400,
-			HttpOnly: true,
-			SameSite: http.SameSiteLaxMode,
-		}
-		http.SetCookie(w, &newCookie)
+		// The cookie-setting logic has been removed.
 
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(analysisResp); err != nil {
@@ -159,12 +188,31 @@ func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
 	}
 }
 
-// main function is unchanged
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, will look for environment variables")
 	}
 
+	// --- Initialize Redis Client ---
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379" // Default value if not set in .env
+	}
+	redisPassword := os.Getenv("REDIS_PASSWORD")
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     redisAddr,
+		Password: redisPassword,
+		DB:       0, // use default DB
+	})
+
+	// Ping Redis to check the connection
+	if _, err := rdb.Ping(context.Background()).Result(); err != nil {
+		log.Fatalf("Could not connect to Redis: %v", err)
+	}
+	log.Println("Redis client connected successfully.")
+
+	// --- Initialize Gemini Client ---
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		log.Println("GEMINI_API_KEY not found. Attempting to use GOOGLE_APPLICATION_CREDENTIALS.")
@@ -180,7 +228,7 @@ func main() {
 	if apiKey != "" {
 		client, err = genai.NewClient(ctx, option.WithAPIKey(apiKey))
 	} else {
-		client, err = genai.NewClient(ctx)
+		client, err = genai.NewClient(ctx) // For service account
 	}
 
 	if err != nil {
@@ -191,9 +239,11 @@ func main() {
 	model := client.GenerativeModel("gemini-2.5-flash")
 	log.Println("Gemini client initialized successfully.")
 
+	// --- Set up HTTP server ---
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/", fs)
-	http.HandleFunc("/chat", chatHandler(model))
+	// Pass both the Gemini model and the Redis client to the handler
+	http.HandleFunc("/chat", chatHandler(model, rdb))
 
 	port := "8080"
 	log.Printf("Server starting on http://localhost:%s", port)
