@@ -23,7 +23,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const nextStepsContent = document.getElementById("next-steps-content");
     
     // --- Initial State ---
-    // Show the resume overlay on first load
     resumeOverlay.classList.add("visible");
 
     // --- Event Listeners ---
@@ -51,7 +50,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Show loading state
         runButton.disabled = true;
         runButtonText.textContent = "Analyzing...";
         resultsContent.classList.add("hidden");
@@ -80,12 +78,25 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Error fetching analysis:", error);
             dashboardPlaceholder.innerHTML = `<p style="color: #ff5555;">An error occurred. Please check the console and try again.</p>`;
         } finally {
-            // Reset loading state
             runButton.disabled = false;
             runButtonText.textContent = "Analyze";
         }
     });
 
+    /**
+     * NEW: Converts a string with **bold** markdown into a string with <strong> tags.
+     * @param {string} text - The input text from the API.
+     * @returns {string} - The HTML-formatted string.
+     */
+    function markdownToHtml(text) {
+      if (!text) return "";
+      return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    }
+
+    /**
+     * UPDATED: Populates the dashboard with data from the API.
+     * @param {object} data - The parsed JSON response.
+     */
     function updateDashboard(data) {
         dashboardPlaceholder.classList.add("hidden");
         resultsContent.classList.remove("hidden");
@@ -93,7 +104,8 @@ document.addEventListener("DOMContentLoaded", () => {
         progressBarFill.style.width = `${data.matchScore}%`;
         scoreText.textContent = `${data.matchScore}%`;
 
-        improvementsContent.textContent = data.improvements;
-        nextStepsContent.textContent = data.nextSteps;
+        // Use the markdown converter and innerHTML to render bold text
+        improvementsContent.innerHTML = markdownToHtml(data.improvements);
+        nextStepsContent.innerHTML = markdownToHtml(data.nextSteps);
     }
 });
