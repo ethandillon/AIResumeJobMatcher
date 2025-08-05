@@ -23,6 +23,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.12.5 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/redis/go-redis/v9 v9.12.0 // indirect
+	github.com/rs/cors v1.11.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.51.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.51.0 // indirect
