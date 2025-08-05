@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv" // <-- NEW: Import for string conversion
+	"strconv"
 	"strings"
 
 	"github.com/google/generative-ai-go/genai"
@@ -15,20 +15,34 @@ import (
 	"google.golang.org/api/option"
 )
 
-// Constants for our rate limiting
+type FlexibleStringSlice []string
+
+func (f *FlexibleStringSlice) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		*f = []string{s}
+		return nil
+	}
+	var sl []string
+	if err := json.Unmarshal(data, &sl); err == nil {
+		*f = sl
+		return nil
+	}
+	return fmt.Errorf("could not unmarshal %q as either a string or a slice of strings", data)
+}
+
 const usageCookieName = "usage_count"
 const maxUsageCount = 3
 
-// Structs are unchanged
 type AnalysisRequest struct {
 	Resume         string `json:"resume"`
 	JobDescription string `json:"jobDescription"`
 }
 
 type AnalysisResponse struct {
-	MatchScore   int    `json:"matchScore"`
-	Improvements string `json:"improvements"`
-	NextSteps    string `json:"nextSteps"`
+	MatchScore   int                 `json:"matchScore"`
+	Improvements FlexibleStringSlice `json:"improvements"`
+	NextSteps    FlexibleStringSlice `json:"nextSteps"`
 }
 
 func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
@@ -38,11 +52,8 @@ func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
 			return
 		}
 
-		// --- NEW: Rate Limiting Logic ---
 		var currentCount int = 0
 		usageCookie, err := r.Cookie(usageCookieName)
-
-		// If cookie exists, read its value
 		if err == nil {
 			count, convErr := strconv.Atoi(usageCookie.Value)
 			if convErr == nil {
@@ -50,13 +61,11 @@ func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
 			}
 		}
 
-		// Check if the user has exceeded the limit
 		if currentCount >= maxUsageCount {
 			log.Printf("User has reached usage limit of %d. Blocking request.", maxUsageCount)
 			http.Error(w, "You have reached your usage limit for today.", http.StatusTooManyRequests)
-			return // Stop processing
+			return
 		}
-		// --- End of Rate Limiting Logic ---
 
 		var req AnalysisRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -70,8 +79,8 @@ func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
 			Your response MUST be a valid JSON object. Do not include any text or markdown formatting before or after the JSON object.
 			The JSON object must have the following keys and value types:
 			- "matchScore": an integer between 0 and 100 representing the match percentage.
-			- "improvements": a string containing 3-5 bullet points (using **word** for bolding) on how to improve the resume for this specific job.
-			- "nextSteps": a string containing 2-3 bullet points (using **word** for bolding) on actionable next steps for the applicant.
+			- "improvements": a JSON array of strings, where each string is a bullet point (using **word** for bolding) on how to improve the resume.
+			- "nextSteps": a JSON array of strings, where each string is a bullet point (using **word** for bolding) on actionable next steps.
 
 			Here is the data:
 
@@ -94,6 +103,15 @@ func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
 			return
 		}
 
+		// NEW: Check the Finish Reason
+		if len(resp.Candidates) > 0 {
+			if resp.Candidates[0].FinishReason == genai.FinishReasonSafety {
+				log.Println("WARNING: Gemini response was blocked due to safety settings.")
+				http.Error(w, "The analysis was blocked by the content safety filter. This can happen due to sensitive information in the resume or job description. Please try again with different text.", http.StatusBadRequest)
+				return
+			}
+		}
+
 		if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
 			log.Println("Received empty response from Gemini")
 			http.Error(w, "Received an empty response from the AI model", http.StatusInternalServerError)
@@ -109,6 +127,9 @@ func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
 		cleanedString = strings.TrimSuffix(cleanedString, "```")
 		cleanedString = strings.TrimSpace(cleanedString)
 
+		// NEW: Unconditional Logging for Debugging
+		log.Printf("Cleaned JSON response from Gemini: %s", cleanedString)
+
 		var analysisResp AnalysisResponse
 		if err := json.Unmarshal([]byte(cleanedString), &analysisResp); err != nil {
 			log.Printf("Error unmarshaling JSON from Gemini: %v", err)
@@ -119,18 +140,16 @@ func chatHandler(model *genai.GenerativeModel) http.HandlerFunc {
 
 		log.Printf("Successfully received and parsed analysis. Match score: %d%%", analysisResp.MatchScore)
 
-		// --- NEW: Set the updated cookie on successful response ---
 		newCount := currentCount + 1
 		newCookie := http.Cookie{
 			Name:     usageCookieName,
 			Value:    strconv.Itoa(newCount),
-			Path:     "/",   // Make it available on the whole site
-			MaxAge:   86400, // 24 hours in seconds
-			HttpOnly: true,  // Recommended for security
+			Path:     "/",
+			MaxAge:   86400,
+			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
 		}
 		http.SetCookie(w, &newCookie)
-		// --- End of Cookie Setting ---
 
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(analysisResp); err != nil {
