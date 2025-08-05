@@ -69,49 +69,63 @@ document.addEventListener("DOMContentLoaded", () => {
 
     jdForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        
-        const jobDescriptionText = jdInput.value.trim();
+    
+    const jobDescriptionText = jdInput.value.trim();
 
-        if (storedResume.trim() === "") {
-            alert("Please enter your resume first by clicking the 'Edit Resume' button.");
-            return;
-        }
-        if (jobDescriptionText === "") {
-            alert("Please paste a job description.");
-            return;
-        }
+    if (storedResume.trim() === "") {
+        alert("Please enter your resume first by clicking the 'Edit Resume' button.");
+        return;
+    }
+    if (jobDescriptionText === "") {
+        alert("Please paste a job description.");
+        return;
+    }
 
-        runButton.disabled = true;
-        runButtonText.textContent = "Analyzing...";
-        resultsContent.classList.add("hidden");
-        dashboardPlaceholder.classList.remove("hidden");
-        dashboardPlaceholder.innerHTML = "<p>Analyzing... this may take a moment.</p>";
+    runButton.disabled = true;
+    runButtonText.textContent = "Analyzing...";
+    resultsContent.classList.add("hidden");
+    dashboardPlaceholder.classList.remove("hidden");
+    dashboardPlaceholder.innerHTML = "<p>Analyzing... this may take a moment.</p>";
 
-        try {
-            const response = await fetch("/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    resume: storedResume, 
-                    jobDescription: jobDescriptionText 
-                }),
-            });
+    try {
+        const response = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                resume: storedResume, 
+                jobDescription: jobDescriptionText 
+            }),
+        });
 
-            if (!response.ok) {
+        // UPDATED: Handle the response based on its status code
+        if (!response.ok) {
+            // NEW: Specifically check for the rate limit error
+            if (response.status === 429) {
                 const errorText = await response.text();
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+                dashboardPlaceholder.innerHTML = `<p style="color: #ff9800;">${errorText}</p>`;
+                runButtonText.textContent = "Limit Reached"; // Keep button disabled
+                // We don't re-enable the button in the finally block for this case
+                return; // Exit the function
             }
-            
-            const data = await response.json();
-            updateDashboard(data);
+            // Handle other server errors
+            const errorText = await response.text();
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
+        
+        const data = await response.json();
+        updateDashboard(data);
 
-        } catch (error) {
-            console.error("Error fetching analysis:", error);
-            dashboardPlaceholder.innerHTML = `<p style="color: #ff5555;">An error occurred. Please check the console and try again.</p>`;
-        } finally {
+    } catch (error) {
+        console.error("Error fetching analysis:", error);
+        dashboardPlaceholder.innerHTML = `<p style="color: #ff5555;">An error occurred. Please check the console and try again.</p>`;
+    } finally {
+        // This block will now only run for success or generic errors,
+        // not for the 429 error because we 'return' out of the try block.
+        if (runButtonText.textContent !== "Limit Reached") {
             runButton.disabled = false;
             runButtonText.textContent = "Analyze";
         }
+    }
     });
 
     function markdownToHtml(text) {
