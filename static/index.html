@@ -8,12 +8,19 @@
 </head>
 <body>
 
-    <!-- NEW: Resume Overlay that appears on top -->
+    <!-- Resume Overlay -->
     <div id="resume-overlay">
         <div id="resume-editor">
             <h2>Resume</h2>
-            <textarea id="resume-input" placeholder="Paste your full resume text here..."></textarea>
-            <button id="save-resume-button">Save & Close</button>
+            <!-- UPDATED: Added maxlength attribute -->
+            <textarea id="resume-input" placeholder="Paste your full resume text here..." maxlength="8000"></textarea>
+            <!-- NEW: Character Counter -->
+            <div class="editor-footer">
+                <div id="resume-char-counter" class="char-counter">
+                    <span id="resume-current-chars">0</span> / 8000
+                </div>
+                <button id="save-resume-button">Save & Close</button>
+            </div>
         </div>
     </div>
 
@@ -23,9 +30,9 @@
             <button id="edit-resume-button" class="hidden">Edit Resume</button>
         </header>
 
-        <!-- The results and the job description are now grouped -->
         <main id="main-content">
             <div id="results-dashboard">
+                <!-- ... (dashboard content remains the same) ... -->
                 <div id="dashboard-placeholder">
                     <p>Enter your resume and a job description to see your analysis.</p>
                 </div>
@@ -50,13 +57,20 @@
 
             <form id="jd-form">
                 <label for="jd-input">Job Description</label>
-                <textarea id="jd-input" placeholder="Paste the job description here..."></textarea>
-                <button type="submit" id="run-button">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                        <path d="M8 5v14l11-7z"/>
-                    </svg>
-                    <span id="run-button-text">Analyze</span>
-                </button>
+                <!-- UPDATED: Added maxlength attribute -->
+                <textarea id="jd-input" placeholder="Paste the job description here..." maxlength="4000"></textarea>
+                <!-- NEW: Character Counter -->
+                <div class="form-footer">
+                     <div id="jd-char-counter" class="char-counter">
+                        <span id="jd-current-chars">0</span> / 4000
+                    </div>
+                    <button type="submit" id="run-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <span id="run-button-text">Analyze</span>
+                    </button>
+                </div>
             </form>
         </main>
         

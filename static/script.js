@@ -14,7 +14,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const runButton = document.getElementById("run-button");
     const runButtonText = document.getElementById("run-button-text");
 
-    // Dashboard elements
+    // NEW: Character Counter elements
+    const resumeCounter = document.getElementById("resume-char-counter");
+    const resumeCurrentChars = document.getElementById("resume-current-chars");
+    const jdCounter = document.getElementById("jd-char-counter");
+    const jdCurrentChars = document.getElementById("jd-current-chars");
+
+    // Dashboard elements (unchanged)
     const dashboardPlaceholder = document.getElementById("dashboard-placeholder");
     const resultsContent = document.getElementById("results-content");
     const progressBarFill = document.getElementById("progress-bar-fill");
@@ -25,7 +31,32 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Initial State ---
     resumeOverlay.classList.add("visible");
 
-    // --- Event Listeners ---
+    // --- NEW: Character Counter Logic ---
+    const setupCounter = (textArea, currentEl, counterEl) => {
+        const update = () => {
+            const currentLength = textArea.value.length;
+            const maxLength = textArea.maxLength;
+            currentEl.textContent = currentLength;
+
+            counterEl.classList.remove("warning", "limit-reached");
+            if (currentLength >= maxLength) {
+                counterEl.classList.add("limit-reached");
+            } else if (currentLength >= maxLength * 0.9) {
+                counterEl.classList.add("warning");
+            }
+        };
+        // Update on input, paste, cut, etc.
+        textArea.addEventListener("input", update);
+        // Initial call to set the counter to 0
+        update();
+    };
+
+    // Initialize the counters for both text areas
+    setupCounter(resumeInput, resumeCurrentChars, resumeCounter);
+    setupCounter(jdInput, jdCurrentChars, jdCounter);
+
+
+    // --- Event Listeners (rest of the file is the same) ---
     saveResumeButton.addEventListener("click", () => {
         storedResume = resumeInput.value;
         resumeOverlay.classList.remove("visible");
@@ -83,20 +114,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    /**
-     * NEW: Converts a string with **bold** markdown into a string with <strong> tags.
-     * @param {string} text - The input text from the API.
-     * @returns {string} - The HTML-formatted string.
-     */
     function markdownToHtml(text) {
       if (!text) return "";
       return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     }
 
-    /**
-     * UPDATED: Populates the dashboard with data from the API.
-     * @param {object} data - The parsed JSON response.
-     */
     function updateDashboard(data) {
         dashboardPlaceholder.classList.add("hidden");
         resultsContent.classList.remove("hidden");
@@ -104,7 +126,6 @@ document.addEventListener("DOMContentLoaded", () => {
         progressBarFill.style.width = `${data.matchScore}%`;
         scoreText.textContent = `${data.matchScore}%`;
 
-        // Use the markdown converter and innerHTML to render bold text
         improvementsContent.innerHTML = markdownToHtml(data.improvements);
         nextStepsContent.innerHTML = markdownToHtml(data.nextSteps);
     }

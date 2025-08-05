@@ -99,3 +99,45 @@ body {
 #app-footer a { color: #aaa; text-decoration: none; }
 #app-footer a:hover { color: var(--primary-accent); }
 #app-footer span { margin: 0 10px; }
+
+/* Add these new styles anywhere in your style.css file */
+
+/* --- Character Counter Styles --- */
+.char-counter {
+    font-size: 0.8em;
+    color: #aaa;
+    transition: color 0.2s ease-in-out;
+}
+
+/* Warning color when approaching the limit */
+.char-counter.warning {
+    color: #ff9800; /* Orange */
+}
+
+/* Limit reached color */
+.char-counter.limit-reached {
+    color: #f44336; /* Red */
+    font-weight: bold;
+}
+
+/* --- Footer containers for alignment --- */
+.editor-footer, .form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+}
+
+/* Adjust the specific form footer to align the button to the right */
+.form-footer {
+    /* This overrides the align-self from the original #run-button style */
+    margin-top: 15px; 
+}
+
+/* Remove margin from button now that it's in a flex container */
+#run-button {
+    margin-top: 0; 
+}
+#save-resume-button {
+    margin-top: 0;
+}
