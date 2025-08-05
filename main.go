@@ -3,27 +3,27 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors" // For handling specific http errors
+
+	// "errors" // No longer needed
 	"fmt"
-	"log/slog" // Structured logger
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
+
+	// "os/signal" // No longer needed
 	"strings"
-	"syscall" // For catching shutdown signals
+	// "syscall" // No longer needed
 	"time"
 
 	"github.com/google/generative-ai-go/genai"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
-	"github.com/rs/cors" // For CORS middleware
+	"github.com/rs/cors"
 	"google.golang.org/api/option"
 )
 
 // A custom type that can unmarshal a JSON string OR a JSON array of strings
-// into a Go slice of strings. This makes our code resilient to Gemini's
-// inconsistent output format.
 type FlexibleStringSlice []string
 
 func (f *FlexibleStringSlice) UnmarshalJSON(data []byte) error {
@@ -195,6 +195,7 @@ func (app *application) healthCheckHandler(w http.ResponseWriter, r *http.Reques
 	json.NewEncoder(w).Encode(data)
 }
 
+// CORRECTED main function
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
@@ -237,7 +238,7 @@ func main() {
 	}
 	defer client.Close()
 
-	model := client.GenerativeModel("gemini-2.5-flash")
+	model := client.GenerativeModel("gemini-1.5-flash-latest")
 	logger.Info("gemini client initialized")
 
 	app := &application{
@@ -257,41 +258,18 @@ func main() {
 	mux.HandleFunc("/chat", app.chatHandler)
 	mux.HandleFunc("/healthz", app.healthCheckHandler)
 
-	corsHandler := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"}, // TODO: Restrict this to your actual domain in production
+	handler := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"}, // TODO: Restrict in production
 		AllowedMethods: []string{"GET", "POST", "OPTIONS"},
 		AllowedHeaders: []string{"Content-Type"},
 	}).Handler(mux)
 
-	srv := &http.Server{
-		Addr:         ":" + port,
-		Handler:      corsHandler,
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-	}
+	logger.Info("starting server", "addr", ":"+port)
 
-	go func() {
-		logger.Info("starting server", "addr", srv.Addr)
-		err := srv.ListenAndServe()
-		if !errors.Is(err, http.ErrServerClosed) {
-			logger.Error("server error", "error", err)
-			os.Exit(1)
-		}
-	}()
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	logger.Info("shutting down server...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		logger.Error("server shutdown failed", "error", err)
+	// Use a direct, blocking ListenAndServe call.
+	err = http.ListenAndServe(":"+port, handler)
+	if err != nil {
+		logger.Error("server failed to start", "error", err)
 		os.Exit(1)
 	}
-
-	logger.Info("server exited gracefully")
 }
