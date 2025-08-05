@@ -188,7 +188,7 @@ func main() {
 	}
 	defer client.Close()
 
-	model := client.GenerativeModel("gemini-1.5-flash-latest")
+	model := client.GenerativeModel("gemini-2.5-flash")
 	log.Println("Gemini client initialized successfully.")
 
 	fs := http.FileServer(http.Dir("./static"))
