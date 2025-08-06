@@ -172,3 +172,29 @@ textarea[readonly]:focus { outline: none; }
         padding: 20px;
     }
 }
+
+#logo-container {
+    display: flex;
+    align-items: center;
+    gap: 0px;
+    /* NEW: Set the desired color here! */
+    color: white; /* We set the color on the parent container */
+}
+
+#app-logo {
+    width: 65px;
+    height: 65px;
+    transition: transform 0.3s ease;
+    color:white;
+    margin-bottom: 8px;
+}
+
+/* Target the path elements inside the SVG */
+#app-logo path {
+    fill: currentColor;
+}
+
+
+#app-logo:hover {
+    transform: scale(1.1) rotate(-5deg);
+}
