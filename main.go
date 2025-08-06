@@ -238,7 +238,7 @@ func main() {
 	}
 	defer client.Close()
 
-	model := client.GenerativeModel("gemini-2.5-flash")
+	model := client.GenerativeModel("gemini-2.0-flash")
 	logger.Info("gemini client initialized")
 
 	app := &application{
