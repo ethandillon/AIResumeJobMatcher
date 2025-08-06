@@ -128,7 +128,7 @@ textarea[readonly]:focus { outline: none; }
 #resume-editor h2 { margin-top: 0; }
 #resume-input { flex-grow: 1; }
 
-#app-footer { text-align: center; color: var(--text-secondary); font-size: 0.9em; padding: 40px 0 20px 0; }
+#app-footer { text-align: center; color: var(--text-secondary); font-size: 0.9em; padding: 80px 0 0 0;  }
 #app-footer a { color: var(--text-secondary); text-decoration: none; transition: color 0.2s; }
 #app-footer a:hover { color: var(--primary-accent); }
 #app-footer span { margin: 0 10px; }
