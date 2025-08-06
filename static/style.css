@@ -28,7 +28,6 @@ body {
     color: var(--text-primary);
     margin: 0;
     height: auto;
-    min-height: 100vh;
 }
 
 .hidden { display: none !important; }
@@ -39,7 +38,9 @@ body {
     gap: 20px;
     width: 95%;
     max-width: 1400px;
-    margin: 40px auto;
+    margin-top: 40px;
+    margin-left: auto;
+    margin-right: auto;
     align-items: flex-start;
 }
 
@@ -102,7 +103,7 @@ body {
 /* Forms & Inputs (Reverted to simpler focus) */
 #jd-form { display: flex; flex-direction: column; padding: 25px; background-color: #161e2b; border-top: 1px solid var(--border-color); }
 #jd-form label { font-weight: bold; margin-bottom: 10px; font-size: 1.1em; }
-textarea { background-color: var(--container-bg); border: 1px solid var(--border-color); resize: vertical; color: var(--text-primary); font-size: 1em; padding: 15px; outline: none; border-radius: 8px; transition: border-color 0.2s; }
+textarea { background-color: var(--container-bg); border: 1px solid var(--border-color); resize: vertical; color: var(--text-primary); font-size: 1em; padding: 15px; outline: none; border-radius: 8px; transition: border-color 0.2s; min-height:300px;}
 textarea:focus { border-color: var(--primary-accent); }
 textarea[readonly] { background-color: var(--container-bg); cursor: default; opacity: 0.8; }
 textarea[readonly]:focus { outline: none; }
