@@ -60,7 +60,8 @@ body {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 80px);
+    height: auto;
+    max-height: calc(100vh - 80px);
 }
 
 /* --- 4. Component Styles (Reverted to simpler styles) --- */
@@ -81,7 +82,7 @@ body {
 
 /* Main Header & Content */
 #app-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; }
-#app-header h1 { font-size: 1.8em; margin: 0; }
+#app-header h1 { font-size: 2.0em; margin: 0; }
 #edit-resume-button { padding: 8px 16px; background-color: var(--input-bg); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; cursor: pointer; transition: background-color 0.2s; }
 #edit-resume-button:hover { background-color: var(--border-color); }
 #main-content { overflow: hidden; }
