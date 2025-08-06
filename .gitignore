@@ -3,3 +3,5 @@
 server
 
 credentials.json
+
+tmp/
