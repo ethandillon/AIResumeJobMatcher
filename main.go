@@ -78,7 +78,7 @@ func getIPAddress(r *http.Request) string {
 
 // chatHandler is now a method on the 'application' struct.
 func (app *application) chatHandler(w http.ResponseWriter, r *http.Request) {
-	const maxUsageCount = 3
+	const maxUsageCount = 5
 	const rateLimitDuration = 24 * time.Hour
 
 	if r.Method != http.MethodPost {
