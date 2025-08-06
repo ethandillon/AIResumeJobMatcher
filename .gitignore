@@ -5,3 +5,5 @@ server
 credentials.json
 
 tmp/
+*.log
+.air.toml  # If it contains sensitive data
