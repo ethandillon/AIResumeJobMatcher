@@ -40,6 +40,7 @@ body {
     width: 95%;
     max-width: 1400px;
     margin: 40px auto;
+    align-items: flex-start;
 }
 
 #history-panel, #main-content {
