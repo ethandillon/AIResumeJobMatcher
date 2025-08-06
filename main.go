@@ -119,8 +119,8 @@ func (app *application) chatHandler(w http.ResponseWriter, r *http.Request) {
 		Your response MUST be a valid JSON object. Do not include any text or markdown formatting before or after the JSON object.
 		The JSON object must have the following keys and value types:
 		- "matchScore": an integer between 0 and 100 representing the match percentage.
-		- "improvements": a JSON array of strings, where each string is a bullet point (using **word** for bolding) on how to improve the resume.
-		- "nextSteps": a JSON array of strings, where each string is a bullet point (using **word** for bolding) on actionable next steps.
+		- "improvements": a JSON array of strings, where each string is a bullet point that begins with a dash (using **word** for bolding) on how to improve the resume.
+		- "nextSteps": a JSON array of strings, where each string is a bullet point that begins with a dash (using **word** for bolding) on actionable next steps.
 
 		Here is the data:
 		**Resume:**
@@ -238,7 +238,7 @@ func main() {
 	}
 	defer client.Close()
 
-	model := client.GenerativeModel("gemini-1.5-flash-latest")
+	model := client.GenerativeModel("gemini-2.5-flash")
 	logger.Info("gemini client initialized")
 
 	app := &application{
